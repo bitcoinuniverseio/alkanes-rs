@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env npx tsx
 
 /**
  * Alkanes Deployment Script for Regtest (using @alkanes/ts-sdk bindings)
@@ -7,14 +7,19 @@
  * Pattern follows deploy-regtest.sh but uses the TypeScript SDK
  *
  * Usage:
- *   node deploy-regtest-bindgen.js
- *   node deploy-regtest-bindgen.js --skip-wasms  # Skip WASM deployments, only setup wallet
+ *   npx tsx deploy-regtest-bindgen.ts
+ *   npx tsx deploy-regtest-bindgen.ts --skip-wasms  # Skip WASM deployments, only setup wallet
  */
 
 import { readFileSync, existsSync, readdirSync, writeFileSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { homedir } from 'os';
+
+import {
+  AlkanesProvider,
+  NETWORK_PRESETS,
+} from '../ts-sdk/src/index';
 
 // Get __dirname equivalent in ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -27,7 +32,7 @@ const __dirname = dirname(__filename);
 const CONFIG = {
   WASM_DIR: join(__dirname, '../prod_wasms'),
   RPC_URL: process.env.RPC_URL || 'http://127.0.0.1:18888',
-  NETWORK: 'regtest',
+  NETWORK: 'regtest' as const,
   WALLET_DIR: join(homedir(), '.alkanes'),
   WALLET_FILE: join(homedir(), '.alkanes', 'wallet.json'),
 
@@ -60,7 +65,17 @@ const CONFIG = {
   FRBTC_ID: '32:0',
   DIESEL_AMOUNT: '300000000',  // 300M DIESEL
   FRBTC_AMOUNT: '50000',       // 0.0005 BTC in sats
-};
+} as const;
+
+// ============================================================================
+// Types
+// ============================================================================
+
+interface WalletData {
+  mnemonic: string;
+  network: string;
+  created_at: string;
+}
 
 // ============================================================================
 // Logging Helpers
@@ -73,25 +88,25 @@ const COLORS = {
   yellow: '\x1b[33m',
   blue: '\x1b[34m',
   cyan: '\x1b[36m',
-};
+} as const;
 
-function logInfo(msg) {
+function logInfo(msg: string): void {
   console.log(`${COLORS.blue}[INFO]${COLORS.reset} ${msg}`);
 }
 
-function logSuccess(msg) {
+function logSuccess(msg: string): void {
   console.log(`${COLORS.green}[SUCCESS]${COLORS.reset} ${msg}`);
 }
 
-function logError(msg) {
+function logError(msg: string): void {
   console.log(`${COLORS.red}[ERROR]${COLORS.reset} ${msg}`);
 }
 
-function logWarn(msg) {
+function logWarn(msg: string): void {
   console.log(`${COLORS.yellow}[WARN]${COLORS.reset} ${msg}`);
 }
 
-function logSection(title) {
+function logSection(title: string): void {
   console.log('');
   logInfo('==========================================');
   logInfo(title);
@@ -103,11 +118,11 @@ function logSection(title) {
 // Utility Functions
 // ============================================================================
 
-function sleep(ms) {
+function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-function readWasmAsHex(wasmPath) {
+function readWasmAsHex(wasmPath: string): string {
   if (!existsSync(wasmPath)) {
     throw new Error(`WASM file not found: ${wasmPath}`);
   }
@@ -119,14 +134,11 @@ function readWasmAsHex(wasmPath) {
 // SDK Setup
 // ============================================================================
 
-async function setupSDK() {
-  // Dynamic import of the SDK
-  const { AlkanesProvider, NETWORK_PRESETS } = await import('../ts-sdk/dist/index.mjs');
-
+async function setupSDK(): Promise<{ provider: AlkanesProvider }> {
   // Create provider with regtest configuration
   const provider = new AlkanesProvider({
-    ...NETWORK_PRESETS.regtest,
-    jsonRpcUrl: CONFIG.RPC_URL,
+    network: 'regtest',
+    rpcUrl: CONFIG.RPC_URL,
   });
 
   await provider.initialize();
@@ -138,10 +150,10 @@ async function setupSDK() {
 // Pre-deployment Checks
 // ============================================================================
 
-async function checkRegtest(provider) {
+async function checkRegtest(provider: AlkanesProvider): Promise<boolean> {
   logInfo('Checking if regtest node is running...');
   try {
-    const height = await provider.bitcoind.getBlockCount();
+    const height = await provider.bitcoin.getBlockCount();
     logSuccess(`Regtest node is running at ${CONFIG.RPC_URL} (height: ${height})`);
     return true;
   } catch (err) {
@@ -152,7 +164,7 @@ async function checkRegtest(provider) {
   }
 }
 
-function checkWasms() {
+function checkWasms(): boolean {
   logInfo('Checking if WASM files exist in prod_wasms...');
 
   if (!existsSync(CONFIG.WASM_DIR)) {
@@ -174,8 +186,11 @@ function checkWasms() {
 // Wallet Setup
 // ============================================================================
 
-function loadOrCreateWallet(provider) {
+function loadOrCreateWallet(provider: AlkanesProvider): string {
   logInfo('Setting up wallet...');
+
+  // Get the raw WASM provider for wallet operations
+  const rawProvider = provider.rawProvider;
 
   // Create wallet directory if it doesn't exist
   if (!existsSync(CONFIG.WALLET_DIR)) {
@@ -186,23 +201,24 @@ function loadOrCreateWallet(provider) {
   if (existsSync(CONFIG.WALLET_FILE)) {
     logInfo('Loading existing wallet...');
     try {
-      const walletData = JSON.parse(readFileSync(CONFIG.WALLET_FILE, 'utf8'));
-      provider.walletLoadMnemonic(walletData.mnemonic);
-      const addresses = provider.walletGetAddresses('p2tr', 0, 1);
+      const walletData: WalletData = JSON.parse(readFileSync(CONFIG.WALLET_FILE, 'utf8'));
+      rawProvider.walletLoadMnemonic(walletData.mnemonic);
+      const addresses = rawProvider.walletGetAddresses('p2tr', 0, 1);
       logSuccess(`Loaded wallet with address: ${addresses[0].address}`);
       return addresses[0].address;
     } catch (err) {
-      logWarn(`Failed to load wallet: ${err.message}`);
+      const error = err as Error;
+      logWarn(`Failed to load wallet: ${error.message}`);
       logInfo('Creating new wallet...');
     }
   }
 
   // Create new wallet using SDK binding
   logInfo('Creating new wallet via SDK...');
-  const walletInfo = provider.walletCreate();
+  const walletInfo = rawProvider.walletCreate();
 
   // Save wallet to file
-  const walletData = {
+  const walletData: WalletData = {
     mnemonic: walletInfo.mnemonic,
     network: CONFIG.NETWORK,
     created_at: new Date().toISOString(),
@@ -219,7 +235,7 @@ function loadOrCreateWallet(provider) {
   return walletInfo.address;
 }
 
-async function fundWallet(provider, walletAddress) {
+async function fundWallet(provider: AlkanesProvider, walletAddress: string): Promise<void> {
   logInfo('Checking if wallet needs funding...');
 
   // Check UTXO count
@@ -233,7 +249,7 @@ async function fundWallet(provider, walletAddress) {
   logInfo('No UTXOs found, mining blocks to fund wallet...');
   logInfo('Mining 400 blocks to wallet address...');
 
-  await provider.bitcoind.call('generatetoaddress', [400, walletAddress]);
+  await provider.bitcoin.generateToAddress(400, walletAddress);
 
   logInfo('Waiting for indexer to sync blocks (15 seconds)...');
   await sleep(15000);
@@ -241,10 +257,10 @@ async function fundWallet(provider, walletAddress) {
   logSuccess('Wallet funded! Ready for deployments');
 }
 
-async function ensureCoinbaseMaturity(provider, walletAddress) {
+async function ensureCoinbaseMaturity(provider: AlkanesProvider, walletAddress: string): Promise<void> {
   logInfo('Ensuring coinbase maturity (mining 101 blocks)...');
 
-  await provider.bitcoind.call('generatetoaddress', [101, walletAddress]);
+  await provider.bitcoin.generateToAddress(101, walletAddress);
 
   logInfo('Waiting for indexer to sync (10 seconds)...');
   await sleep(10000);
@@ -256,7 +272,14 @@ async function ensureCoinbaseMaturity(provider, walletAddress) {
 // Contract Deployment
 // ============================================================================
 
-async function deployContract(provider, walletAddress, contractName, wasmFile, targetTx, initArgs = '') {
+async function deployContract(
+  provider: AlkanesProvider,
+  walletAddress: string,
+  contractName: string,
+  wasmFile: string,
+  targetTx: number,
+  initArgs: string = ''
+): Promise<boolean> {
   logInfo(`Deploying ${contractName} using [3, ${targetTx}] -> will create at [4, ${targetTx}]...`);
 
   const wasmPath = join(CONFIG.WASM_DIR, wasmFile);
@@ -284,12 +307,14 @@ async function deployContract(provider, walletAddress, contractName, wasmFile, t
       protostones: protostone,
       feeRate: 1,
       envelopeHex: envelopeHex,
+      fromAddresses: [walletAddress],  // Source UTXOs from wallet
+      changeAddress: walletAddress,
       autoConfirm: true,
       mineEnabled: true,  // Auto-mine on regtest
     });
 
     logSuccess(`${contractName} deployed to [4, ${targetTx}]`);
-    logInfo(`  Reveal TXID: ${result.reveal_txid || result.txid || 'N/A'}`);
+    logInfo(`  Reveal TXID: ${result?.reveal_txid || result?.txid || 'N/A'}`);
 
     // Wait for metashrew to index
     logInfo('Waiting for metashrew to index (5 seconds)...');
@@ -299,13 +324,21 @@ async function deployContract(provider, walletAddress, contractName, wasmFile, t
     await verifyDeployment(provider, contractName, targetTx);
 
     return true;
-  } catch (err) {
-    logError(`Failed to deploy ${contractName}: ${err.message}`);
+  } catch (err: any) {
+    const errMsg = err?.message || (typeof err === 'string' ? err : JSON.stringify(err));
+    logError(`Failed to deploy ${contractName}: ${errMsg}`);
+    if (err?.stack) {
+      console.error(err.stack);
+    }
     return false;
   }
 }
 
-async function verifyDeployment(provider, contractName, targetTx) {
+async function verifyDeployment(
+  provider: AlkanesProvider,
+  contractName: string,
+  targetTx: number
+): Promise<boolean> {
   logInfo(`Verifying ${contractName} deployment at [4, ${targetTx}]...`);
 
   for (let i = 0; i < 3; i++) {
@@ -316,7 +349,7 @@ async function verifyDeployment(provider, contractName, targetTx) {
         logSuccess(`Bytecode verified at [4, ${targetTx}] (${bytecodeSize} bytes)`);
         return true;
       }
-    } catch (err) {
+    } catch {
       // Ignore errors, retry
     }
 
@@ -334,15 +367,17 @@ async function verifyDeployment(provider, contractName, targetTx) {
 // Token Operations
 // ============================================================================
 
-async function mineDiesel(provider, walletAddress) {
+async function mineDiesel(provider: AlkanesProvider, walletAddress: string): Promise<boolean> {
   logInfo('Mining DIESEL tokens...');
 
   try {
-    const result = await provider.alkanesExecuteTyped({
+    await provider.alkanesExecuteTyped({
       toAddresses: [walletAddress],
       inputRequirements: '',
       protostones: '[2,0,77]:v0:v0',  // Call DIESEL mint (opcode 77)
       feeRate: 1,
+      fromAddresses: [walletAddress],
+      changeAddress: walletAddress,
       autoConfirm: true,
       mineEnabled: true,
     });
@@ -350,16 +385,21 @@ async function mineDiesel(provider, walletAddress) {
     logSuccess('DIESEL mined');
     return true;
   } catch (err) {
-    logError(`Failed to mine DIESEL: ${err.message}`);
+    const error = err as Error;
+    logError(`Failed to mine DIESEL: ${error.message}`);
     return false;
   }
 }
 
-async function wrapBtc(provider, walletAddress, amount) {
+async function wrapBtc(
+  provider: AlkanesProvider,
+  walletAddress: string,
+  amount: number
+): Promise<boolean> {
   logInfo(`Wrapping ${amount} sats to frBTC...`);
 
   try {
-    const result = await provider.frbtcWrapTyped({
+    await provider.frbtcWrapTyped({
       amount: BigInt(amount),
       toAddress: walletAddress,
       fromAddress: walletAddress,
@@ -370,7 +410,8 @@ async function wrapBtc(provider, walletAddress, amount) {
     logSuccess('frBTC wrapped');
     return true;
   } catch (err) {
-    logError(`Failed to wrap frBTC: ${err.message}`);
+    const error = err as Error;
+    logError(`Failed to wrap frBTC: ${error.message}`);
     return false;
   }
 }
@@ -379,7 +420,10 @@ async function wrapBtc(provider, walletAddress, amount) {
 // AMM Pool Operations
 // ============================================================================
 
-async function initializeFactory(provider, walletAddress) {
+async function initializeFactory(
+  provider: AlkanesProvider,
+  walletAddress: string
+): Promise<boolean> {
   logInfo('Initializing OYL Factory with InitFactory opcode...');
   logInfo('This requires spending auth token [2:1] to authenticate the call...');
 
@@ -388,11 +432,13 @@ async function initializeFactory(provider, walletAddress) {
   logInfo('  Opcode 0 = InitFactory(pool_beacon_proxy_id, pool_beacon_id)');
 
   try {
-    const result = await provider.alkanesExecuteTyped({
+    await provider.alkanesExecuteTyped({
       toAddresses: [walletAddress],
       inputRequirements: '2:1:1',  // Input: 1 auth token from 2:1
       protostones: protostone,
       feeRate: 1,
+      fromAddresses: [walletAddress],
+      changeAddress: walletAddress,
       autoConfirm: true,
       mineEnabled: true,
       traceEnabled: true,
@@ -405,12 +451,16 @@ async function initializeFactory(provider, walletAddress) {
 
     return true;
   } catch (err) {
-    logError(`Failed to initialize OYL Factory: ${err.message}`);
+    const error = err as Error;
+    logError(`Failed to initialize OYL Factory: ${error.message}`);
     return false;
   }
 }
 
-async function createTestPool(provider, walletAddress) {
+async function createTestPool(
+  provider: AlkanesProvider,
+  walletAddress: string
+): Promise<boolean> {
   logSection('Creating Test Pool (DIESEL/frBTC)');
 
   // Mine DIESEL
@@ -425,7 +475,7 @@ async function createTestPool(provider, walletAddress) {
 
   // Mine a block to confirm
   logInfo('Mining a block to confirm transactions...');
-  await provider.bitcoind.call('generatetoaddress', [1, walletAddress]);
+  await provider.bitcoin.generateToAddress(1, walletAddress);
 
   logInfo('Waiting for metashrew to index (15 seconds)...');
   await sleep(15000);
@@ -455,7 +505,8 @@ async function createTestPool(provider, walletAddress) {
 
     return true;
   } catch (err) {
-    logError(`Failed to create pool: ${err.message}`);
+    const error = err as Error;
+    logError(`Failed to create pool: ${error.message}`);
     return false;
   }
 }
@@ -464,22 +515,22 @@ async function createTestPool(provider, walletAddress) {
 // Main Deployment Process
 // ============================================================================
 
-async function main() {
+async function main(): Promise<void> {
   const skipWasms = process.argv.includes('--skip-wasms');
 
   logSection('Alkanes Regtest Deployment (ts-sdk)');
 
   // Setup SDK
   logInfo('Initializing @alkanes/ts-sdk...');
-  let sdk;
+  let provider: AlkanesProvider;
   try {
-    sdk = await setupSDK();
+    const sdk = await setupSDK();
+    provider = sdk.provider;
   } catch (err) {
-    logError(`Failed to initialize SDK: ${err.message}`);
+    const error = err as Error;
+    logError(`Failed to initialize SDK: ${error.message}`);
     process.exit(1);
   }
-
-  const { provider } = sdk;
 
   // Pre-deployment checks
   if (!await checkRegtest(provider)) {
@@ -680,7 +731,8 @@ async function main() {
 
 // Run
 main().catch(err => {
-  logError(`Deployment failed: ${err.message}`);
+  const error = err as Error;
+  logError(`Deployment failed: ${error.message}`);
   console.error(err);
   process.exit(1);
 });
