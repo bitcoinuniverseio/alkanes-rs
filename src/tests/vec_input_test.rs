@@ -103,7 +103,11 @@ fn test_vec_inputs() -> Result<()> {
 
     // Get the trace data from the transaction for process_numbers
     let outpoint_process_numbers = OutPoint {
-        txid: test_block`n            .txdata`n            .last()`n            .ok_or(anyhow!("no last el"))?`n            .compute_txid(),
+        txid: test_block
+            .txdata
+            .last()
+            .ok_or(anyhow!("no last el"))?
+            .compute_txid(),
         vout: 3,
     };
 
@@ -123,7 +127,7 @@ fn test_vec_inputs() -> Result<()> {
             .last()
             .ok_or(anyhow!("no last el"))?
             .compute_txid(),
-        vout: 3,
+        vout: 4,
     };
 
     let trace_data_get_strings = view::trace(&outpoint_get_strings)?;
@@ -146,7 +150,7 @@ fn test_vec_inputs() -> Result<()> {
             .last()
             .ok_or(anyhow!("no last el"))?
             .compute_txid(),
-        vout: 4,
+        vout: 5,
     };
 
     let trace_data_process_nested_vec = view::trace(&outpoint_process_nested_vec)?;
