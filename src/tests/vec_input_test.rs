@@ -1,7 +1,7 @@
 use crate::{message::AlkaneMessageContext, tests::std::alkanes_std_test_build};
 use alkanes_support::cellpack::Cellpack;
 use alkanes_support::id::AlkaneId;
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use bitcoin::OutPoint;
 use metashrew_support::utils::consensus_encode;
 
@@ -9,7 +9,6 @@ use crate::index_block;
 use crate::tests::helpers::{self as alkane_helpers, assert_binary_deployed_to_id};
 use alkane_helpers::clear;
 use alkanes::view;
-use bitcoin::Witness;
 #[allow(unused_imports)]
 use metashrew_core::{
     println,
@@ -24,21 +23,14 @@ fn test_vec_inputs() -> Result<()> {
     // Get the LoggerAlkane ID
     let logger_alkane_id = AlkaneId { block: 2, tx: 1 };
 
-    // Create a cellpack to call the process_numbers method (opcode 11)
-    let process_numbers_cellpack = Cellpack {
+    // The bootstrap contract creates the logger from the attached WASM.
+    // Keep deployment separate from the logger calls, as the factory fixture does.
+    let deployment_cellpack = Cellpack {
         target: AlkaneId { block: 1, tx: 0 },
-        inputs: vec![
-            11, // opcode for process_numbers
-            4,  // length of the vector
-            10, // first element
-            20, // second element
-            30, // third element
-            40, // fourth element
-        ],
+        inputs: vec![30, 2, 1, 1_000_000],
     };
 
-    // Invoke the logger only after the bootstrap transaction has deployed it.
-    let process_numbers_call = Cellpack {
+    let process_numbers_cellpack = Cellpack {
         target: logger_alkane_id.clone(),
         inputs: vec![11, 4, 10, 20, 30, 40],
     };
@@ -70,27 +62,23 @@ fn test_vec_inputs() -> Result<()> {
         ],
     };
 
-    // Initialize the contract and execute the cellpacks
-    let mut test_block = alkane_helpers::init_with_multiple_cellpacks_with_tx(
-        [alkanes_std_test_build::get_bytes()].into(),
-        [process_numbers_cellpack].into(),
-    );
-
-    // Add a transaction with the remaining cellpacks
-    test_block.txdata.push(
-        alkane_helpers::create_multiple_cellpack_with_witness_and_in(
-            Witness::new(),
-            vec![process_numbers_call, process_strings_cellpack, process_nested_vec_cellpack],
-            OutPoint {
-                txid: test_block
-                    .txdata
-                    .last()
-                    .ok_or(anyhow!("no last el"))?
-                    .compute_txid(),
-                vout: 0,
-            },
-            false,
-        ),
+    // Build one transaction for deployment followed by one transaction per
+    // logger call. This preserves the trace layout used by the factory fixture.
+    let test_block = alkane_helpers::init_with_multiple_cellpacks_with_tx(
+        [
+            alkanes_std_test_build::get_bytes(),
+            [].into(),
+            [].into(),
+            [].into(),
+        ]
+        .into(),
+        [
+            deployment_cellpack,
+            process_numbers_cellpack,
+            process_strings_cellpack,
+            process_nested_vec_cellpack,
+        ]
+        .into(),
     );
 
     index_block(&test_block, block_height)?;
@@ -103,11 +91,7 @@ fn test_vec_inputs() -> Result<()> {
 
     // Get the trace data from the transaction for process_numbers
     let outpoint_process_numbers = OutPoint {
-        txid: test_block
-            .txdata
-            .last()
-            .ok_or(anyhow!("no last el"))?
-            .compute_txid(),
+        txid: test_block.txdata[2].compute_txid(),
         vout: 3,
     };
 
@@ -122,12 +106,8 @@ fn test_vec_inputs() -> Result<()> {
 
     // Get the trace data from the transaction for get_strings
     let outpoint_get_strings = OutPoint {
-        txid: test_block
-            .txdata
-            .last()
-            .ok_or(anyhow!("no last el"))?
-            .compute_txid(),
-        vout: 4,
+        txid: test_block.txdata[3].compute_txid(),
+        vout: 3,
     };
 
     let trace_data_get_strings = view::trace(&outpoint_get_strings)?;
@@ -145,12 +125,8 @@ fn test_vec_inputs() -> Result<()> {
 
     // Get the trace data from the transaction for process_nested_vec
     let outpoint_process_nested_vec = OutPoint {
-        txid: test_block
-            .txdata
-            .last()
-            .ok_or(anyhow!("no last el"))?
-            .compute_txid(),
-        vout: 5,
+        txid: test_block.txdata[4].compute_txid(),
+        vout: 3,
     };
 
     let trace_data_process_nested_vec = view::trace(&outpoint_process_nested_vec)?;
