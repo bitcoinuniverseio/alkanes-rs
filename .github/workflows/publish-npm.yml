@@ -215,6 +215,7 @@ jobs:
         with:
           name: pkg-manifest-${{ steps.version.outputs.version }}
           path: pkg-manifests/*.json
+          retention-days: 3
 
       - name: Tag as latest-dev
         working-directory: ts-sdk
