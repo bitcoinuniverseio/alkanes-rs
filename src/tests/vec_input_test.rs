@@ -1,15 +1,13 @@
 use crate::{message::AlkaneMessageContext, tests::std::alkanes_std_test_build};
 use alkanes_support::cellpack::Cellpack;
 use alkanes_support::id::AlkaneId;
-use anyhow::{anyhow, Result};
-use bitcoin::OutPoint;
+use anyhow::Result;
 use metashrew_support::utils::consensus_encode;
 
 use crate::index_block;
 use crate::tests::helpers::{self as alkane_helpers, assert_binary_deployed_to_id};
 use alkane_helpers::clear;
 use alkanes::view;
-use bitcoin::Witness;
 #[allow(unused_imports)]
 use metashrew_core::{
     println,
@@ -20,23 +18,21 @@ use wasm_bindgen_test::wasm_bindgen_test;
 #[wasm_bindgen_test]
 fn test_vec_inputs() -> Result<()> {
     clear();
-    let block_height = 0;
+    let block_height: u32 = 0;
     // Get the LoggerAlkane ID
     let logger_alkane_id = AlkaneId { block: 2, tx: 1 };
 
-    // Create a cellpack to call the process_numbers method (opcode 11)
-    let process_numbers_cellpack = Cellpack {
-        target: logger_alkane_id.clone(),
-        inputs: vec![
-            11, // opcode for process_numbers
-            4,  // length of the vector
-            10, // first element
-            20, // second element
-            30, // third element
-            40, // fourth element
-        ],
+    // The bootstrap contract creates the logger from the attached WASM.
+    // Keep deployment separate from the logger calls, as the factory fixture does.
+    let deployment_cellpack = Cellpack {
+        target: AlkaneId { block: 1, tx: 0 },
+        inputs: vec![30, 2, 1, 1_000_000],
     };
 
+    let process_numbers_cellpack = Cellpack {
+        target: logger_alkane_id.clone(),
+        inputs: vec![11, 4, 10, 20, 30, 40],
+    };
     // Create a cellpack to call the process_strings method (opcode 12)
     // For "hello" and "world" strings with null terminators
     let hello_bytes = u128::from_le_bytes(*b"hello\0\0\0\0\0\0\0\0\0\0\0");
@@ -65,27 +61,11 @@ fn test_vec_inputs() -> Result<()> {
         ],
     };
 
-    // Initialize the contract and execute the cellpacks
-    let mut test_block = alkane_helpers::init_with_multiple_cellpacks_with_tx(
+    // Deploy the logger through the bootstrap contract before exercising its
+    // public vector methods.
+    let test_block = alkane_helpers::init_with_multiple_cellpacks_with_tx(
         [alkanes_std_test_build::get_bytes()].into(),
-        [process_numbers_cellpack].into(),
-    );
-
-    // Add a transaction with the remaining cellpacks
-    test_block.txdata.push(
-        alkane_helpers::create_multiple_cellpack_with_witness_and_in(
-            Witness::new(),
-            vec![process_strings_cellpack, process_nested_vec_cellpack],
-            OutPoint {
-                txid: test_block
-                    .txdata
-                    .last()
-                    .ok_or(anyhow!("no last el"))?
-                    .compute_txid(),
-                vout: 0,
-            },
-            false,
-        ),
+        [deployment_cellpack].into(),
     );
 
     index_block(&test_block, block_height)?;
@@ -96,63 +76,43 @@ fn test_vec_inputs() -> Result<()> {
         alkanes_std_test_build::get_bytes(),
     );
 
-    // Get the trace data from the transaction for process_numbers
-    let outpoint_process_numbers = OutPoint {
-        txid: test_block.txdata[1].compute_txid(),
-        vout: 3,
-    };
-
-    let trace_data_process_numbers = view::trace(&outpoint_process_numbers)?;
-    println!("process_numbers trace: {:?}", trace_data_process_numbers);
+    let process_numbers_data = view::call_view(
+        &logger_alkane_id,
+        &process_numbers_cellpack.inputs,
+        1_000_000,
+    )?;
 
     // Verify the process_numbers result contains the expected values
     assert_eq!(
-        trace_data_process_numbers[trace_data_process_numbers.len() - 16],
+        process_numbers_data[process_numbers_data.len() - 16],
         100,
     );
 
-    // Get the trace data from the transaction for get_strings
-    let outpoint_get_strings = OutPoint {
-        txid: test_block
-            .txdata
-            .last()
-            .ok_or(anyhow!("no last el"))?
-            .compute_txid(),
-        vout: 3,
-    };
-
-    let trace_data_get_strings = view::trace(&outpoint_get_strings)?;
-    let trace_str = String::from_utf8_lossy(&trace_data_get_strings);
-    println!("get_strings trace: {:?}", trace_str);
+    let process_strings_data = view::call_view(
+        &logger_alkane_id,
+        &process_strings_cellpack.inputs,
+        1_000_000,
+    )?;
+    let strings = String::from_utf8_lossy(&process_strings_data);
     let expected_name = "hello,world";
 
     // Verify the get_strings result contains the expected values
     // The result should be a vector with ["hello", "world"]
     assert!(
-        trace_str.contains(expected_name),
-        "Trace data should contain the name '{}', but it doesn't",
+        strings.contains(expected_name),
+        "Response data should contain the name '{}', but it doesn't",
         expected_name
     );
 
-    // Get the trace data from the transaction for process_nested_vec
-    let outpoint_process_nested_vec = OutPoint {
-        txid: test_block
-            .txdata
-            .last()
-            .ok_or(anyhow!("no last el"))?
-            .compute_txid(),
-        vout: 4,
-    };
-
-    let trace_data_process_nested_vec = view::trace(&outpoint_process_nested_vec)?;
-    println!(
-        "process_nested_vec trace: {:?}",
-        trace_data_process_nested_vec
-    );
+    let process_nested_vec_data = view::call_view(
+        &logger_alkane_id,
+        &process_nested_vec_cellpack.inputs,
+        1_000_000,
+    )?;
 
     // The result should be the total number of elements: 3 + 2 = 5
     assert_eq!(
-        trace_data_process_nested_vec[trace_data_process_nested_vec.len() - 16],
+        process_nested_vec_data[process_nested_vec_data.len() - 16],
         5,
     );
 
