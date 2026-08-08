@@ -26,7 +26,7 @@ fn test_vec_inputs() -> Result<()> {
 
     // Create a cellpack to call the process_numbers method (opcode 11)
     let process_numbers_cellpack = Cellpack {
-        target: AlkaneId { block: 1, tx: 0 },
+        target: logger_alkane_id.clone(),
         inputs: vec![
             11, // opcode for process_numbers
             4,  // length of the vector
