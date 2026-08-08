@@ -20,15 +20,13 @@ use wasm_bindgen_test::wasm_bindgen_test;
 #[wasm_bindgen_test]
 fn test_vec_inputs() -> Result<()> {
     clear();
-    let block_height: u32 = 880_000; // Must match init_with_multiple_cellpacks_with_tx.
+    let block_height: u32 = 0;
     // Get the LoggerAlkane ID
-    let logger_alkane_id = AlkaneId { block: u128::from(block_height) + 2, tx: 1 };
+    let logger_alkane_id = AlkaneId { block: 2, tx: 1 };
 
     // Create a cellpack to call the process_numbers method (opcode 11)
     let process_numbers_cellpack = Cellpack {
-        target: logger_alkane_id.clone(),
-        inputs: vec![
-            11, // opcode for process_numbers
+        target: AlkaneId { block: 1, tx: 0 },\r\n        inputs: vec![\r\n            11, // opcode for process_numbers
             4,  // length of the vector
             10, // first element
             20, // second element
