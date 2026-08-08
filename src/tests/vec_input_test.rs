@@ -20,7 +20,7 @@ use wasm_bindgen_test::wasm_bindgen_test;
 #[wasm_bindgen_test]
 fn test_vec_inputs() -> Result<()> {
     clear();
-    let block_height: u32 = 840_000;
+    let block_height: u32 = 880_000; // Must match init_with_multiple_cellpacks_with_tx.
     // Get the LoggerAlkane ID
     let logger_alkane_id = AlkaneId { block: u128::from(block_height) + 2, tx: 1 };
 
