@@ -22,7 +22,7 @@ fn test_vec_inputs() -> Result<()> {
     clear();
     let block_height = 840_000;
     // Get the LoggerAlkane ID
-    let logger_alkane_id = AlkaneId { block: 2, tx: 1 };
+    let logger_alkane_id = AlkaneId { block: block_height + 2, tx: 1 };
 
     // Create a cellpack to call the process_numbers method (opcode 11)
     let process_numbers_cellpack = Cellpack {
