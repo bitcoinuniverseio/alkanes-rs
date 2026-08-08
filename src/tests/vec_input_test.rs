@@ -37,6 +37,11 @@ fn test_vec_inputs() -> Result<()> {
         ],
     };
 
+    // Invoke the logger only after the bootstrap transaction has deployed it.
+    let process_numbers_call = Cellpack {
+        target: logger_alkane_id.clone(),
+        inputs: vec![11, 4, 10, 20, 30, 40],
+    };
     // Create a cellpack to call the process_strings method (opcode 12)
     // For "hello" and "world" strings with null terminators
     let hello_bytes = u128::from_le_bytes(*b"hello\0\0\0\0\0\0\0\0\0\0\0");
@@ -75,7 +80,7 @@ fn test_vec_inputs() -> Result<()> {
     test_block.txdata.push(
         alkane_helpers::create_multiple_cellpack_with_witness_and_in(
             Witness::new(),
-            vec![process_strings_cellpack, process_nested_vec_cellpack],
+            vec![process_numbers_call, process_strings_cellpack, process_nested_vec_cellpack],
             OutPoint {
                 txid: test_block
                     .txdata
@@ -98,7 +103,7 @@ fn test_vec_inputs() -> Result<()> {
 
     // Get the trace data from the transaction for process_numbers
     let outpoint_process_numbers = OutPoint {
-        txid: test_block.txdata[1].compute_txid(),
+        txid: test_block`n            .txdata`n            .last()`n            .ok_or(anyhow!("no last el"))?`n            .compute_txid(),
         vout: 3,
     };
 
