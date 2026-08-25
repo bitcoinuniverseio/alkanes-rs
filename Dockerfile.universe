@@ -26,8 +26,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       libclang-dev \
       libssl-dev \
       pkg-config \
+      protobuf-compiler \
       ca-certificates \
     && rm -rf /var/lib/apt/lists/*
+
+# The Alkanes crates compile protobuf definitions with prost during the build.
+ENV PROTOC=/usr/bin/protoc
 
 RUN rustup target add wasm32-unknown-unknown
 
