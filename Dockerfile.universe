@@ -1,0 +1,66 @@
+# Universe-operated Alkanes indexer image.
+#
+# The stock Dockerfile clones metashrew from a third-party repository at
+# v8.5.1-rc1, which is neither Universe-operated nor the revision the
+# index-alkanes Marketplace authority pins. This image instead takes
+# rockshrew-mono from the Universe metashrew build at the exact pinned tag and
+# compiles alkanes.wasm here, so the whole execution chain is first-party.
+#
+# Prerequisite:
+#   docker build -f docker/Dockerfile.rockshrew-mono \
+#     -t universe/metashrew-rockshrew:v9.0.5-rc.8 .        (in bitcoinuniverseio/metashrew)
+#
+# Build:
+#   docker build -f Dockerfile.universe \
+#     --build-arg ROCKSHREW_IMAGE=universe/metashrew-rockshrew:v9.0.5-rc.8 \
+#     -t universe/alkanes-indexer:v2.2.1-rc.4 .
+ARG ROCKSHREW_IMAGE=universe/metashrew-rockshrew:v9.0.5-rc.8
+
+FROM ${ROCKSHREW_IMAGE} AS rockshrew
+
+FROM rust:1.86.0-slim-bookworm AS wasm-builder
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      build-essential \
+      clang \
+      libclang-dev \
+      libssl-dev \
+      pkg-config \
+      ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN rustup target add wasm32-unknown-unknown
+
+WORKDIR /usr/src/alkanes-rs
+COPY . .
+
+RUN cargo build --release --target wasm32-unknown-unknown --features mainnet
+
+FROM debian:bookworm-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      libssl3 \
+      ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd --system --create-home --uid 10001 alkanes \
+    && mkdir -p /data/rocksdb \
+    && chown -R alkanes:alkanes /data
+
+COPY --from=rockshrew /usr/local/bin/rockshrew-mono /usr/local/bin/rockshrew-mono
+COPY --from=wasm-builder \
+     /usr/src/alkanes-rs/target/wasm32-unknown-unknown/release/alkanes.wasm \
+     /usr/local/bin/alkanes.wasm
+
+USER alkanes
+WORKDIR /data
+EXPOSE 8080
+
+# Bind to loopback by default. Alkanes state is private infrastructure and must
+# not be published without an authenticated Universe gateway in front of it.
+ENTRYPOINT ["rockshrew-mono", \
+    "--db-path", "/data/rocksdb", \
+    "--indexer", "/usr/local/bin/alkanes.wasm", \
+    "--host", "127.0.0.1", \
+    "--port", "8080", \
+    "--start-block", "880000"]
+CMD []
