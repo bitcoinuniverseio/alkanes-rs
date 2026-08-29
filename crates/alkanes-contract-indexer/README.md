@@ -3,7 +3,7 @@
 A Rust service that monitors new blocks via Metashrew, fans out concurrent jobs to decode and index Alkanes-related data, and writes results to Postgres. It leverages the deezel toolkit for all Alkanes/Bitcoin RPC interactions.
 
 ### Highlights
-- **Background polling**: Reliable loop that queries Metashrew and derives a authoritative tip height (`metashrew_height - 1`), with exponential backoff and reorg awareness.
+- **Background polling**: Reliable loop that queries Metashrew and derives an authoritative tip height (`metashrew_height - 1`), with exponential backoff and reorg awareness.
 - **Pools/state refresh on new tip**: When a higher tip is detected, the service first refreshes pools and inserts new `PoolState` snapshots only if values changed.
 - **Block-processing pipeline**: For each new block height the service:
   - resolves the block hash via Bitcoin RPC
