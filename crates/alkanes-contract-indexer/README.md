@@ -3,7 +3,7 @@
 A Rust service that monitors new blocks via Metashrew, fans out concurrent jobs to decode and index Alkanes-related data, and writes results to Postgres. It leverages the deezel toolkit for all Alkanes/Bitcoin RPC interactions.
 
 ### Highlights
-- **Background polling**: Reliable loop that queries Metashrew and derives a canonical tip height (`metashrew_height - 1`), with exponential backoff and reorg awareness.
+- **Background polling**: Reliable loop that queries Metashrew and derives a authoritative tip height (`metashrew_height - 1`), with exponential backoff and reorg awareness.
 - **Pools/state refresh on new tip**: When a higher tip is detected, the service first refreshes pools and inserts new `PoolState` snapshots only if values changed.
 - **Block-processing pipeline**: For each new block height the service:
   - resolves the block hash via Bitcoin RPC
@@ -225,7 +225,7 @@ The service will:
 1) Connect to Postgres
 2) Construct a deezel provider
 3) Start the `BlockPoller` loop which:
-   - reads canonical tip height via `metashrew_height - 1`
+   - reads authoritative tip height via `metashrew_height - 1`
    - detects new heights (filling gaps)
    - on first observation (no previous height): triggers `Pipeline::fetch_pools_for_tip(provider, tip)` once
    - after a successful pools refresh, writes Redis key `indexer-${NETWORK_ENV || NETWORK || 'mainnet'}-pools-lastblock` with value `<tip>`
@@ -236,7 +236,7 @@ The service will:
    - on no height change: skips pools/state refresh and block processing
 4) If `START_HEIGHT` is set, start the catch-up coordinator which:
    - waits for the poller to initialize tip (and perform the initial pools/state refresh) before starting
-   - reads canonical tip height and computes `[next..=tip]` from `START_HEIGHT` and the last stored progress from DB
+   - reads authoritative tip height and computes `[next..=tip]` from `START_HEIGHT` and the last stored progress from DB
    - sequentially processes `[next..=tip]` via `Pipeline::process_block_sequential` (publishing disabled for these blocks)
    - persists `last_processed_height` in `kv_store`
    - after catch-up, the poller continues processing subsequent new blocks as they arrive
@@ -304,7 +304,7 @@ This executes `Pipeline::process_block_sequential` for the given height and will
 - Upsert `ProcessedBlocks` again for the height with the current block hash and timestamp.
 
 ### Metashrew height off-by-one
-- Metashrew's `get_metashrew_height()` reports the next height (tip + 1). The indexer normalizes this by subtracting 1 to obtain the canonical chain tip.
+- Metashrew's `get_metashrew_height()` reports the next height (tip + 1). The indexer normalizes this by subtracting 1 to obtain the authoritative chain tip.
 - Implementation: `helpers/block.rs` provides `canonical_tip_height(provider)` used by both the poller and catch-up coordinator.
 
 Shutdown with Ctrl-C.
