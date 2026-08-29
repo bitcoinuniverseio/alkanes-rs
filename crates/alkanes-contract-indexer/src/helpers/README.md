@@ -3,7 +3,7 @@
 This directory groups helper modules used by the indexer pipeline. These modules isolate RPC access, decoding logic, and domain-specific processing so they can be extended or optimized independently.
 
 ## block.rs
-- canonical_tip_height(provider): Returns metashrew_height - 1 to correct Metashrew's off-by-one. It uses the resilient provider wrapper (timeout, retry/backoff, circuit breaker, global semaphore) to tolerate transient RPC failures.
+- authoritative_tip_height(provider): Returns metashrew_height - 1 to correct Metashrew's off-by-one. It uses the resilient provider wrapper (timeout, retry/backoff, circuit breaker, global semaphore) to tolerate transient RPC failures.
 - get_block_hash(provider, height): Thin wrapper over Bitcoin RPC to get the block hash by height.
 - get_block_txids(provider, block_hash): Calls JSON-RPC esplora_block::txids on the configured Sandshrew/Metashrew endpoint (from SANDSHREW_RPC_URL or provider default) via the resilient JSON-RPC wrapper.
 - get_transactions_info(provider, txids, batch_size): Concurrent fan-out using Futures streams to fetch esplora_tx for each txid, each request using the resilient JSON-RPC wrapper. Returns a Vec<serde_json::Value> (preserving inputs order after collection is not guaranteed; callers that require order should re-map).
@@ -101,7 +101,7 @@ Indexes AMM pool swap events from stored trace events and writes structured rows
 
 - Data sources and shapes used:
   - `TraceEvent` rows produced by `protostone.rs` with fields: `eventType`, `vout`, `alkaneAddressBlock`, `alkaneAddressTx`, and JSON `data` containing `context.inputs`, `context.incomingAlkanes`, `response.alkanes`, etc.
-  - `Pool` table provides canonical token pairs per pool (`token0BlockId/token0TxId`, `token1BlockId/token1TxId`).
+  - `Pool` table provides authoritative token pairs per pool (`token0BlockId/token0TxId`, `token1BlockId/token1TxId`).
 
 - Normalization details:
   - Token `id.block/tx` and `value` fields may arrive as u128 `{hi,lo}` objects, hex strings (e.g., `"0x2"`), decimal strings, or numbers. The decoder normalizes each to u128 before comparing or summing to avoid false negatives.

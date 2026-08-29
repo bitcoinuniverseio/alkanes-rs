@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-This document provides a comprehensive, step-by-step plan to build out the complete alkanes-data-api using the infrastructure already in place in alkanes-contract-indexer. With our newly implemented unified trace events, we have all the raw data needed—now we need to process it and expose it via API endpoints.
+This document provides a comprehensive, step-by-step plan to build out the complete alkanes-data-api using the infrastructure already in place in alkanes-contract-indexer. With our newly implemented unified trace events, we have all the raw data needed, now we need to process it and expose it via API endpoints.
 
 ---
 
@@ -870,6 +870,6 @@ With the unified trace events in place, we have **all the data** needed to build
 2. **Aggregating** into queryable tables
 3. **Exposing** via REST API endpoints
 
-No complex RocksDB integration, no specialized contract parsing—just clean extraction from the unified traces we're already indexing!
+No complex RocksDB integration, no specialized contract parsing, just clean extraction from the unified traces we're already indexing!
 
 **Estimated Total Effort**: 4-6 weeks for one developer, or 2-3 weeks for a team of 2-3.

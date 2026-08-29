@@ -8,7 +8,7 @@
 This repository hosts Rust sources for the ALKANES metaprotocol. The indexer for ALKANES can be built as the top level crate in the monorepo, with builds targeting wasm32-unknown-unknown, usable within the METASHREW indexer stack.
 
 ALKANES is a metaprotocol designed to support an incarnation of DeFi as we have traditionally seen it, but designed specifically for the Bitcoin consensus model and supporting structures.
-The ALKANES genesis block is 880000. Builders can end-to-end test their own alkanes smart contracts against the **exact mainnet indexer code path** — no real funds and no live regtest required — using this repository's test harness (see [Testing alkanes end-to-end](#testing-alkanes-end-to-end) below).
+The ALKANES genesis block is 880000. Builders can end-to-end test their own alkanes smart contracts against the **exact mainnet indexer code path**, no real funds and no live regtest required, using this repository's test harness (see [Testing alkanes end-to-end](#testing-alkanes-end-to-end) below).
 
 Public SUBFROST RPC endpoints: mainnet `https://mainnet.subfrost.io/v4/jsonrpc`, signet `https://signet.subfrost.io/v4/jsonrpc`.
 
@@ -30,7 +30,7 @@ For information on protorunes, refer to the specification hosted at:
 
 The indexer stack used to synchronize the state of the metaprotocol and offer an RPC to consume its data and features is METASHREW. METASHREW is started with a WASM binary of the indexer program, produced with a normal build of this repository as `alkanes.wasm`.
 
-Bindings to the METASHREW environment are consumed from the pinned [`kungfuflex/metashrew`](https://github.com/kungfuflex/metashrew) dependency (the canonical METASHREW repository); the environment-agnostic pieces live in `crates/metashrew-support`.
+Bindings to the METASHREW environment are consumed from the pinned [`kungfuflex/metashrew`](https://github.com/kungfuflex/metashrew) dependency (the authoritative METASHREW repository); the environment-agnostic pieces live in `crates/metashrew-support`.
 
 Sources needed to build both metashrew and protorunes meant to be shared with builds of individual alkanes or the generic alkanes-runtime bindings are factored out into `crates/metashrew-support` and `crates/protorune-support` such that they can be imported into an alkane build without the metashrew import definitions leaking in and generating import statements for the METASHREW environment.
 
@@ -43,8 +43,8 @@ Boilerplate for various alkanes are included and prefixed with `alkanes-std-` an
 ## Building
 
 > **Which branch are you on?** The build differs between the two long-lived branches, so pull the right one and follow the matching instructions:
-> - **`main`** (this branch) — the **release line**; tagged release candidates (e.g. `v2.2.1-rc.4`) are cut from here, and it is what mainnet runs. It is a **mixed workspace** (the default cargo target is native), so the indexer wasm must be built with an explicit target and package: `cargo build --release --target wasm32-unknown-unknown --features mainnet -p alkanes --locked` (see below). Standard alkanes live in `crates/alkanes-std-*` and are built by the test harness.
-> - **`develop`** — active development, with a **different layout**: the top-level crate targets wasm by default, so `cargo build --release` alone produces `alkanes.wasm`; the standard alkanes live in `alkanes/` with prebuilt WASM committed to the repo (rebuilt via `./scripts/build-std.sh`). If you are on `develop`, follow **that branch's** README, not this one.
+> - **`main`** (this branch), the **release line**; tagged release candidates (e.g. `v2.2.1-rc.4`) are cut from here, and it is what mainnet runs. It is a **mixed workspace** (the default cargo target is native), so the indexer wasm must be built with an explicit target and package: `cargo build --release --target wasm32-unknown-unknown --features mainnet -p alkanes --locked` (see below). Standard alkanes live in `crates/alkanes-std-*` and are built by the test harness.
+> - **`develop`**, active development, with a **different layout**: the top-level crate targets wasm by default, so `cargo build --release` alone produces `alkanes.wasm`; the standard alkanes live in `alkanes/` with prebuilt WASM committed to the repo (rebuilt via `./scripts/build-std.sh`). If you are on `develop`, follow **that branch's** README, not this one.
 
 The production ALKANES indexer wasm is built with the command:
 
@@ -52,15 +52,15 @@ The production ALKANES indexer wasm is built with the command:
 cargo build --release --target wasm32-unknown-unknown --features mainnet -p alkanes --locked
 ```
 
-This is the exact, reproducible build used for the shipped `alkanes.wasm` (see `scripts/Dockerfile.wasm` / `scripts/build.sh`, which pin the toolchain and set `SOURCE_DATE_EPOCH`). Replace `mainnet` with your network of choice — constants are defined for luckycoin, regtest, mainnet, dogecoin, bellscoin, and fractal; for other networks or test networks, use the regtest feature.
+This is the exact, reproducible build used for the shipped `alkanes.wasm` (see `scripts/Dockerfile.wasm` / `scripts/build.sh`, which pin the toolchain and set `SOURCE_DATE_EPOCH`). Replace `mainnet` with your network of choice, constants are defined for luckycoin, regtest, mainnet, dogecoin, bellscoin, and fractal; for other networks or test networks, use the regtest feature.
 
 The `alkanes.wasm` file is produced at `target/wasm32-unknown-unknown/release/alkanes.wasm`, and a WASM for every crate prefixed with `alkanes-std-` is made available to the test suite.
 
-> Note: this repository is a mixed workspace — the top-level `alkanes` indexer crate targets `wasm32-unknown-unknown`, while the CLI, SDKs, and tooling crates build natively. The default cargo target is native, so pass `--target wasm32-unknown-unknown -p alkanes` explicitly when building the indexer.
+> Note: this repository is a mixed workspace, the top-level `alkanes` indexer crate targets `wasm32-unknown-unknown`, while the CLI, SDKs, and tooling crates build natively. The default cargo target is native, so pass `--target wasm32-unknown-unknown -p alkanes` explicitly when building the indexer.
 
 ## Indexing
 
-Refer to the METASHREW documentation for descriptions of the indexer stack used for ALKANES. The canonical METASHREW repository is:
+Refer to the METASHREW documentation for descriptions of the indexer stack used for ALKANES. The authoritative METASHREW repository is:
 
 [https://github.com/kungfuflex/metashrew](https://github.com/kungfuflex/metashrew)
 
@@ -68,10 +68,10 @@ Refer to the METASHREW documentation for descriptions of the indexer stack used 
 
 To index ALKANES on mainnet you must run matching, current versions of both components:
 
-- **alkanes-rs `v2.2.1-rc.4`** (latest) — built to `alkanes.wasm` and loaded via `--indexer`. See [`v2.2.1-rc.4`](https://github.com/kungfuflex/alkanes-rs/releases/tag/v2.2.1-rc.4).
-- **metashrew `v9.0.5-rc.14`** — the [`kungfuflex/metashrew`](https://github.com/kungfuflex/metashrew/releases/tag/v9.0.5-rc.14) indexer stack (`rockshrew-mono`).
+- **alkanes-rs `v2.2.1-rc.4`** (latest), built to `alkanes.wasm` and loaded via `--indexer`. See [`v2.2.1-rc.4`](https://github.com/kungfuflex/alkanes-rs/releases/tag/v2.2.1-rc.4).
+- **metashrew `v9.0.5-rc.14`**, the [`kungfuflex/metashrew`](https://github.com/kungfuflex/metashrew/releases/tag/v9.0.5-rc.14) indexer stack (`rockshrew-mono`).
 
-Running mismatched versions can produce divergent state. Live mainnet system health — indexer height, sync status, and RPC availability — can be checked at **[https://mainnet.subfrost.io](https://mainnet.subfrost.io)**.
+Running mismatched versions can produce divergent state. Live mainnet system health, indexer height, sync status, and RPC availability, can be checked at **[https://mainnet.subfrost.io](https://mainnet.subfrost.io)**.
 
 A sample command may look like:
 
@@ -81,7 +81,7 @@ A sample command may look like:
 
 ## Testing alkanes end-to-end
 
-The most useful thing this repository gives contract authors is a **test harness that runs your alkane through the exact same indexer code path that runs on mainnet** — the real `wasmi` execution, the real protorune/alkanes state transitions, the real view functions — all in-memory. You build a Bitcoin block, drop in a transaction whose protostone deploys and calls your contract, index it, then call view functions to assert on the result. **No real funds and no live regtest node.**
+The most useful thing this repository gives contract authors is a **test harness that runs your alkane through the exact same indexer code path that runs on mainnet**, the real `wasmi` execution, the real protorune/alkanes state transitions, the real view functions, all in-memory. You build a Bitcoin block, drop in a transaction whose protostone deploys and calls your contract, index it, then call view functions to assert on the result. **No real funds and no live regtest node.**
 
 An alkanes test project compiles to and runs on `wasm32-unknown-unknown` under **`wasm-bindgen-test-runner`** (the same WASM runner the indexer itself is tested with). One-time setup:
 
@@ -104,7 +104,7 @@ runner = "wasm-bindgen-test-runner"
 
 ### An alkane is opcodes, like a contract interface
 
-An alkane exposes its interface as **opcodes** — numeric selectors, directly analogous to method selectors on an EVM contract. You declare them with a `MessageDispatch` enum: `#[opcode(N)]` is the selector, and `#[returns(T)]` marks a **view** method (one that only reads and returns data — the analogue of a `view`/`pure` function you'd call with `eth_call`):
+An alkane exposes its interface as **opcodes**, numeric selectors, directly analogous to method selectors on an EVM contract. You declare them with a `MessageDispatch` enum: `#[opcode(N)]` is the selector, and `#[returns(T)]` marks a **view** method (one that only reads and returns data, the analogue of a `view`/`pure` function you'd call with `eth_call`):
 
 ```rust
 use alkanes_runtime::{declare_alkane, message::MessageDispatch, runtime::AlkaneResponder};
@@ -146,11 +146,11 @@ declare_alkane! {
 }
 ```
 
-`declare_alkane!` emits the wasm entrypoints (`__execute`, `__meta`); the crate is `crate-type = ["cdylib", "rlib"]`. A `build.rs` compiles your contract to wasm and generates a `get_bytes()` your tests can deploy — copy the pattern from [free-mint's `build.rs`](https://github.com/kungfuflex/free-mint/blob/master/build.rs). (Stock contracts are also available prebuilt via `alkanes::precompiled::*::get_bytes()`, used below.)
+`declare_alkane!` emits the wasm entrypoints (`__execute`, `__meta`); the crate is `crate-type = ["cdylib", "rlib"]`. A `build.rs` compiles your contract to wasm and generates a `get_bytes()` your tests can deploy, copy the pattern from [free-mint's `build.rs`](https://github.com/kungfuflex/free-mint/blob/master/build.rs). (Stock contracts are also available prebuilt via `alkanes::precompiled::*::get_bytes()`, used below.)
 
-### Deploy, index, and call a view — the same code path as mainnet
+### Deploy, index, and call a view, the same code path as mainnet
 
-Add the harness as dev-dependencies. The **`test-utils` feature is required** — it's what makes `alkanes::tests::helpers` public — and your metashrew source must match the one alkanes-rs uses (`kungfuflex/metashrew`, tag `v9.0.5-rc.8`) so the workspace resolves to a single metashrew:
+Add the harness as dev-dependencies. The **`test-utils` feature is required**, it's what makes `alkanes::tests::helpers` public, and your metashrew source must match the one alkanes-rs uses (`kungfuflex/metashrew`, tag `v9.0.5-rc.8`) so the workspace resolves to a single metashrew:
 
 ```toml
 [dev-dependencies]
@@ -162,7 +162,7 @@ wasm-bindgen-test = "0.3"
 anyhow = "1"
 ```
 
-The test below deploys the stock **owned-token** contract in a block, indexes it, and reads its `GetName` view opcode with `call_view` — the **`eth_call` analogue**: it executes a view opcode against current state and returns its bytes, **without persisting any state change**. (This exact test passes against `main`.)
+The test below deploys the stock **owned-token** contract in a block, indexes it, and reads its `GetName` view opcode with `call_view`, the **`eth_call` analogue**: it executes a view opcode against current state and returns its bytes, **without persisting any state change**. (This exact test passes against `main`.)
 
 ```rust
 use alkanes::indexer::index_block;
@@ -210,13 +210,13 @@ fn deploy_and_read_view() -> anyhow::Result<()> {
 }
 ```
 
-Run it with `cargo test`. You've now exercised a contract's `wasmi` execution and a view call in the precise environment it will see live on mainnet — no funds, no regtest.
+Run it with `cargo test`. You've now exercised a contract's `wasmi` execution and a view call in the precise environment it will see live on mainnet, no funds, no regtest.
 
-To read the **persisted execution trace** of a real indexed call (rather than a stateless view), use `view::trace(&outpoint)`. For a full worked contract — a custom alkane with its own `build.rs`, a state-changing mint, and trace assertions — see the [free-mint](https://github.com/kungfuflex/free-mint) and [oyl-amm](https://github.com/kungfuflex/oyl-amm) crates, which test against this harness the same way.
+To read the **persisted execution trace** of a real indexed call (rather than a stateless view), use `view::trace(&outpoint)`. For a full worked contract, a custom alkane with its own `build.rs`, a state-changing mint, and trace assertions, see the [free-mint](https://github.com/kungfuflex/free-mint) and [oyl-amm](https://github.com/kungfuflex/oyl-amm) crates, which test against this harness the same way.
 
 **Notes**
 
-- Tests use `#[wasm_bindgen_test]` (not `#[test]`), because the suite compiles to and runs on wasm — the same target as the indexer.
+- Tests use `#[wasm_bindgen_test]` (not `#[test]`), because the suite compiles to and runs on wasm, the same target as the indexer.
 - The `test-utils` feature is mandatory on the `alkanes` / `protorune` / `metashrew-core` dev-deps; it's what exposes `alkanes::tests::helpers`.
 - Deploy stock contracts with `alkanes::precompiled::*::get_bytes()`; deploy your own with a `build.rs`-generated `get_bytes()`.
 
@@ -246,7 +246,7 @@ Command namespaces include `wallet`, `alkanes` (execute / simulate / trace / ins
 
 ## Building on Alkanes with @alkanes/ts-sdk
 
-`@alkanes/ts-sdk` is the TypeScript library for building on ALKANES — encrypted keystores, HD wallets, transaction construction, and typed clients (`AlkanesRpcClient`, `AlkanesProvider`) for the protocol and SUBFROST data APIs. Install the immutable, content-addressed build from `pkg.alkanes.build`:
+`@alkanes/ts-sdk` is the TypeScript library for building on ALKANES, encrypted keystores, HD wallets, transaction construction, and typed clients (`AlkanesRpcClient`, `AlkanesProvider`) for the protocol and SUBFROST data APIs. Install the immutable, content-addressed build from `pkg.alkanes.build`:
 
 ```sh
 npm install "https://pkg.alkanes.build/dist/@alkanes/ts-sdk?v=0.1.6-669e7c0"
@@ -266,31 +266,31 @@ The typed clients read from the same endpoints as the CLI (`https://mainnet.subf
 
 ## Resources
 
-**Start building today — no indexer to host.** SUBFROST serves live ALKANES + Bitcoin data over a public, rate-limited API; get an API key for higher limits.
+**Start building today, no indexer to host.** SUBFROST serves live ALKANES + Bitcoin data over a public, rate-limited API; get an API key for higher limits.
 
-- **API access & docs** — [https://api.subfrost.io](https://api.subfrost.io) (mainnet JSON-RPC: `https://mainnet.subfrost.io/v4/jsonrpc`)
+- **API access & docs**, [https://api.subfrost.io](https://api.subfrost.io) (mainnet JSON-RPC: `https://mainnet.subfrost.io/v4/jsonrpc`)
 
 **Explore & build**
 
-- **espo** — open-source ALKANES indexer & explorer engine — [https://espo.sh](https://espo.sh)
-- **Block explorer** — [https://explorer.subfrost.io](https://explorer.subfrost.io)
-- **SUBFROST app** (swaps, frBTC, AMM) — [https://app.subfrost.io](https://app.subfrost.io)
-- **Ecosystem** — [https://subfrost.io/ecosystem](https://subfrost.io/ecosystem)
-- **Governance** (WIP) — [https://surtur.org](https://surtur.org)
+- **espo**, open-source ALKANES indexer & explorer engine, [https://espo.sh](https://espo.sh)
+- **Block explorer**, [https://explorer.subfrost.io](https://explorer.subfrost.io)
+- **SUBFROST app** (swaps, frBTC, AMM), [https://app.subfrost.io](https://app.subfrost.io)
+- **Ecosystem**, [https://subfrost.io/ecosystem](https://subfrost.io/ecosystem)
+- **Governance** (WIP), [https://surtur.org](https://surtur.org)
 
-**Wallets — ALKANES-enabled Bitcoin, everywhere**
+**Wallets, ALKANES-enabled Bitcoin, everywhere**
 
-- **Chrome extension** — [https://subfrost.io/download](https://subfrost.io/download)
-- **Android** — [Google Play](https://play.google.com/store/apps/details?id=io.subfrost.android) (iOS coming soon — so ALKANES-enabled Bitcoin works on mobile)
+- **Chrome extension**, [https://subfrost.io/download](https://subfrost.io/download)
+- **Android**, [Google Play](https://play.google.com/store/apps/details?id=io.subfrost.android) (iOS coming soon, so ALKANES-enabled Bitcoin works on mobile)
 - **espo** will soon release an **open-source wallet** for those running their own infrastructure.
 
 **Stay updated**
 
-- **Articles & updates** — [https://subfrost.io/articles](https://subfrost.io/articles)
+- **Articles & updates**, [https://subfrost.io/articles](https://subfrost.io/articles)
 
 ## Acknowledgements
 
-ALKANES is carried forward by a community of builders, indexers, contract authors, and researchers who believe finance can be open, permissionless, and native to Bitcoin. To everyone writing code, running infrastructure, shipping contracts, filing issues, and stress-testing the protocol in the open — thank you. This work moves because you move it, toward a vision of free finance for everyone. 🧡
+ALKANES is carried forward by a community of builders, indexers, contract authors, and researchers who believe finance can be open, permissionless, and native to Bitcoin. To everyone writing code, running infrastructure, shipping contracts, filing issues, and stress-testing the protocol in the open, thank you. This work moves because you move it, toward a vision of free finance for everyone. 🧡
 
 ### Authors
 
