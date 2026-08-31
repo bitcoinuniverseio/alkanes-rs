@@ -8,6 +8,13 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  # build.rs generates the src/tests/std/*_build.rs fixtures for EVERY
+  # alkanes-std-* crate only when some environment variable name contains
+  # "ALL" (see the vars_os().position(...contains("ALL")) check). GitHub's
+  # hosted images satisfied that by accident (GHCUP_INSTALL_BASE_PREFIX);
+  # the RunsOn image does not, which left 9 fixture modules ungenerated
+  # (E0583). Set it explicitly so fixture generation is runner-agnostic.
+  ALKANES_BUILD_ALL_FIXTURES: "1"
 
 jobs:
   test:
