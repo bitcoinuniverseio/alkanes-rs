@@ -4,7 +4,7 @@
   "name": "Alkanes implementation",
   "classification": "implementation",
   "repository": "bitcoinuniverseio/alkanes-rs",
-  "documentationUrl": "https://docs.bitcoinuniverse.io/infrastructure/alkanes-rs/",
+  "documentationUrl": "https://docs.bitcoinuniverse.io/developers/interfaces/",
   "docsRoot": "docs",
   "sourceRef": "main",
   "lifecycle": "experimental",
