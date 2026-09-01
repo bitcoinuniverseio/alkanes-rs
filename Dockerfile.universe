@@ -17,7 +17,7 @@
 #     --build-arg ALKANES_REVISION=<alkanes-sha> \
 #     --build-arg METASHREW_REVISION=<metashrew-sha> \
 #     -t universe/alkanes-indexer:sha-<alkanes-sha12> .
-ARG ROCKSHREW_IMAGE=universe/metashrew-rockshrew:sha-114b4ee5cd49
+ARG ROCKSHREW_IMAGE=universe/metashrew-rockshrew:sha-0828fe33f353
 
 FROM ${ROCKSHREW_IMAGE} AS rockshrew
 
