@@ -3,18 +3,21 @@
 # The stock Dockerfile clones metashrew from a third-party repository at
 # v8.5.1-rc1, which is neither Universe-operated nor the revision the
 # index-alkanes Marketplace authority pins. This image instead takes
-# rockshrew-mono from the Universe metashrew build at the exact pinned tag and
+# rockshrew-mono from the Universe metashrew build at an exact commit tag and
 # compiles alkanes.wasm here, so the whole execution chain is first-party.
 #
 # Prerequisite:
 #   docker build -f docker/Dockerfile.rockshrew-mono \
-#     -t universe/metashrew-rockshrew:v9.0.5-rc.8 .        (in bitcoinuniverseio/metashrew)
+#     -t universe/metashrew-rockshrew:sha-<metashrew-sha12> .
+#       (in bitcoinuniverseio/metashrew)
 #
 # Build:
 #   docker build -f Dockerfile.universe \
-#     --build-arg ROCKSHREW_IMAGE=universe/metashrew-rockshrew:v9.0.5-rc.8 \
-#     -t universe/alkanes-indexer:v2.2.1-rc.4 .
-ARG ROCKSHREW_IMAGE=universe/metashrew-rockshrew:v9.0.5-rc.8
+#     --build-arg ROCKSHREW_IMAGE=universe/metashrew-rockshrew:sha-<metashrew-sha12> \
+#     --build-arg ALKANES_REVISION=<alkanes-sha> \
+#     --build-arg METASHREW_REVISION=<metashrew-sha> \
+#     -t universe/alkanes-indexer:sha-<alkanes-sha12> .
+ARG ROCKSHREW_IMAGE=universe/metashrew-rockshrew:sha-114b4ee5cd49
 
 FROM ${ROCKSHREW_IMAGE} AS rockshrew
 
@@ -32,6 +35,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # The Alkanes crates compile protobuf definitions with prost during the build.
 ENV PROTOC=/usr/bin/protoc
+ENV ALKANES_BUILD_ALL_FIXTURES=1
 
 RUN rustup target add wasm32-unknown-unknown
 
@@ -41,6 +45,13 @@ COPY . .
 RUN cargo build --release --target wasm32-unknown-unknown --features mainnet
 
 FROM debian:bookworm-slim
+
+ARG ALKANES_REVISION=unknown
+ARG METASHREW_REVISION=unknown
+LABEL org.opencontainers.image.source="https://github.com/bitcoinuniverseio/alkanes-rs" \
+      org.opencontainers.image.revision="${ALKANES_REVISION}" \
+      org.opencontainers.image.base.source="https://github.com/bitcoinuniverseio/metashrew" \
+      org.opencontainers.image.base.revision="${METASHREW_REVISION}"
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
       libssl3 \
