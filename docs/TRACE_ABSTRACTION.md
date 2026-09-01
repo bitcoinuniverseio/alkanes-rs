@@ -17,7 +17,7 @@ This caused:
 
 ## Solution
 
-Created a single canonical implementation in the `AlkanesProvider` trait:
+Created a single authoritative implementation in the `AlkanesProvider` trait:
 
 ```rust
 /// Trace all protostones in a transaction (runestone trace)
