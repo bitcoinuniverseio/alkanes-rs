@@ -8,6 +8,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  CARGO_NET_GIT_FETCH_WITH_CLI: "true"
   # build.rs generates the src/tests/std/*_build.rs fixtures for EVERY
   # alkanes-std-* crate only when some environment variable name contains
   # "ALL" (see the vars_os().position(...contains("ALL")) check). GitHub's
@@ -33,6 +34,15 @@ jobs:
     name: ${{ matrix.test-config.name }}
     steps:
       - uses: actions/checkout@v4
+      - name: Authenticate private Universe dependencies
+        env:
+          UNIVERSE_GITHUB_READ_TOKEN: ${{ secrets.UNIVERSE_GITHUB_READ_TOKEN }}
+        run: |
+          test -n "${UNIVERSE_GITHUB_READ_TOKEN}"
+          credentials_file="${RUNNER_TEMP}/universe-git-credentials"
+          printf 'https://x-access-token:%s@github.com\n' "${UNIVERSE_GITHUB_READ_TOKEN}" > "${credentials_file}"
+          chmod 600 "${credentials_file}"
+          git config --global credential.helper "store --file=${credentials_file}"
       - name: Install protoc
         run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
       - name: Install Rust
@@ -43,3 +53,8 @@ jobs:
         run: cargo install wasm-bindgen-cli --version 0.2.100 --locked
       - name: ${{ matrix.test-config.name }}
         run: ${{ matrix.test-config.command }}
+      - name: Remove dependency credentials
+        if: always()
+        run: |
+          rm -f "${RUNNER_TEMP}/universe-git-credentials"
+          git config --global --unset-all credential.helper || true
