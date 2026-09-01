@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1.7
-
 # Universe-operated Alkanes indexer image.
 #
 # The stock Dockerfile clones metashrew from a third-party repository at
