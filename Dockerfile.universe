@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1.7
+
 # Universe-operated Alkanes indexer image.
 #
 # The stock Dockerfile clones metashrew from a third-party repository at
@@ -13,6 +15,7 @@
 #
 # Build:
 #   docker build -f Dockerfile.universe \
+#     --secret id=github_token,env=UNIVERSE_GITHUB_READ_TOKEN \
 #     --build-arg ROCKSHREW_IMAGE=universe/metashrew-rockshrew:sha-<metashrew-sha12> \
 #     --build-arg ALKANES_REVISION=<alkanes-sha> \
 #     --build-arg METASHREW_REVISION=<metashrew-sha> \
@@ -30,6 +33,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       libssl-dev \
       pkg-config \
       protobuf-compiler \
+      git \
       ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
@@ -42,7 +46,15 @@ RUN rustup target add wasm32-unknown-unknown
 WORKDIR /usr/src/alkanes-rs
 COPY . .
 
-RUN cargo build --release --target wasm32-unknown-unknown --features mainnet
+RUN --mount=type=secret,id=github_token,required=true \
+    set -eu; \
+    trap 'rm -f /root/.gitconfig /tmp/github-credentials' EXIT; \
+    token="$(cat /run/secrets/github_token)"; \
+    printf 'https://x-access-token:%s@github.com\n' "$token" > /tmp/github-credentials; \
+    chmod 600 /tmp/github-credentials; \
+    git config --global credential.helper 'store --file=/tmp/github-credentials'; \
+    CARGO_NET_GIT_FETCH_WITH_CLI=true \
+      cargo build --release --target wasm32-unknown-unknown --features mainnet
 
 FROM debian:bookworm-slim
 
