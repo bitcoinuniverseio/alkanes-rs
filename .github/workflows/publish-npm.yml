@@ -32,10 +32,18 @@ env:
   WASM_PACK_VERSION: '0.13.1'
 
 jobs:
+  route:
+    uses: ./.github/workflows/route.yml
+    secrets: inherit
+    with:
+      plan: '{"publish_npm":"light"}'
+      config_ref: 1dd19289af21f4f6be01f874390a180b3af8bb38
+
   publish-npm:
+    needs: route
     # Only run on push events or when a PR is merged (not just closed)
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
-    runs-on: runs-on=${{ github.run_id }}-publish_npm/runner=universe-hosted/cpu=2+8/env=production
+    runs-on: ${{ fromJSON(needs.route.outputs.targets).publish_npm }}
     permissions:
       contents: read
       id-token: write # Required for OIDC/Workload Identity

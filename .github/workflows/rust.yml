@@ -18,8 +18,16 @@ env:
   ALKANES_BUILD_ALL_FIXTURES: "1"
 
 jobs:
+  route:
+    uses: ./.github/workflows/route.yml
+    secrets: inherit
+    with:
+      plan: '{"test":"light"}'
+      config_ref: 1dd19289af21f4f6be01f874390a180b3af8bb38
+
   test:
-    runs-on: runs-on=${{ github.run_id }}-test/runner=universe-hosted/cpu=2+8/env=production
+    needs: route
+    runs-on: ${{ fromJSON(needs.route.outputs.targets).test }}
     strategy:
       matrix:
         test-config:
