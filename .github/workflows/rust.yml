@@ -10,8 +10,15 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  route:
+    uses: bitcoinuniverseio/.github-private/.github/workflows/route.yml@develop
+    secrets: inherit
+    with:
+      plan: '{"test_2":"heavy"}'
+
   test:
-    runs-on: ubuntu-latest
+    needs: route
+    runs-on: ${{ fromJSON(needs.route.outputs.targets).test_2 }}
     strategy:
       matrix:
         test-config:
