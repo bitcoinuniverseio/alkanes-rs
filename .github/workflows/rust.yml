@@ -19,7 +19,7 @@ env:
 
 jobs:
   test:
-    runs-on: runs-on=${{ github.run_id }}-test/runner=universe-hosted/cpu=2+8/env=production
+    runs-on: [self-hosted, linux, x64, universe, gcp, universe-gcp-small]
     strategy:
       matrix:
         test-config:
