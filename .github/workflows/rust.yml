@@ -10,16 +10,8 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  route:
-    uses: ./.github/workflows/route.yml
-    secrets: inherit
-    with:
-      plan: '{"test_2":"heavy"}'
-      config_ref: 1dd19289af21f4f6be01f874390a180b3af8bb38
-
   test:
-    needs: route
-    runs-on: ${{ fromJSON(needs.route.outputs.targets).test_2 }}
+    runs-on: [self-hosted, linux, x64, universe, gcp, universe-gcp-large]
     strategy:
       matrix:
         test-config:
