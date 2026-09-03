@@ -35,7 +35,7 @@ jobs:
   publish-npm:
     # Only run on push events or when a PR is merged (not just closed)
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
-    runs-on: [self-hosted, linux, x64, universe-linux]
+    runs-on: [self-hosted, linux, x64, universe-super]
     permissions:
       contents: read
       id-token: write # Required for OIDC/Workload Identity
