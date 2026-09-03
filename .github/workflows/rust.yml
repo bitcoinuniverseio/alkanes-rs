@@ -11,7 +11,7 @@ env:
 
 jobs:
   test:
-    runs-on: [self-hosted, linux, x64, universe-linux]
+    runs-on: [self-hosted, linux, x64, universe-super]
     strategy:
       matrix:
         test-config:
