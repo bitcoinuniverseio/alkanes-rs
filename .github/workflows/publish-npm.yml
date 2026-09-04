@@ -35,7 +35,7 @@ jobs:
   publish-npm:
     # Only run on push events or when a PR is merged (not just closed)
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
-    runs-on: [self-hosted, linux, x64, universe, gcp, universe-gcp-small]
+    runs-on: [self-hosted, linux, x64, universe-linux]
     permissions:
       contents: read
       id-token: write # Required for OIDC/Workload Identity
@@ -78,8 +78,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: 'ts-sdk/package-lock.json'
 
       - name: Authenticate to Google Cloud
         id: auth
