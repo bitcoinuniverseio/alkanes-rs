@@ -8,7 +8,7 @@ on:
       - 'ts-sdk/**'
       - 'crates/alkanes-web-sys/**'
       # alkanes-cli-common is compiled INTO the web-sys WASM (provider, UTXO
-      # selection, execute) — changes to it change the published artifact.
+      # selection, execute) ; changes to it change the published artifact.
       # Missing from these triggers until 2026-07-11, so pure cli-common fixes
       # silently shipped no new SDK.
       - 'crates/alkanes-cli-common/**'
@@ -34,8 +34,10 @@ env:
 jobs:
   publish-npm:
     # Only run on push events or when a PR is merged (not just closed)
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
-    runs-on: ubuntu-latest
+    if: >-
+      (github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)) &&
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: [self-hosted, universe-ci]
     permissions:
       contents: read
       id-token: write # Required for OIDC/Workload Identity
@@ -103,7 +105,7 @@ jobs:
           # Get base version from package.json
           BASE_VERSION=$(node -p "require('./ts-sdk/package.json').version")
           SHORT_SHA=$(git rev-parse --short=7 HEAD)
-          # IMMUTABLE PUBLISH (#286): the commit sha alone is NOT build-unique —
+          # IMMUTABLE PUBLISH (#286): the commit sha alone is NOT build-unique ;
           # rebuilding/republishing the same commit reused the SAME version tag
           # (0.1.6-<sha>) with different bytes, so warm pnpm/CI caches served the
           # stale artifact forever under an immutable-looking label. Append the
