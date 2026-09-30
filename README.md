@@ -52,7 +52,7 @@ The production ALKANES indexer wasm is built with the command:
 cargo build --release --target wasm32-unknown-unknown --features mainnet -p alkanes --locked
 ```
 
-This is the exact, reproducible build used for the shipped `alkanes.wasm` (see `scripts/Dockerfile.wasm` / `scripts/build.sh`, which pin the toolchain and set `SOURCE_DATE_EPOCH`). Replace `mainnet` with your network of choice, constants are defined for luckycoin, regtest, mainnet, dogecoin, bellscoin, and fractal; for other networks or test networks, use the regtest feature.
+This is the exact, reproducible build used for the shipped `alkanes.wasm` (see `scripts/Dockerfile.wasm` / `scripts/build.sh`, which pin the toolchain and set `SOURCE_DATE_EPOCH`). Replace `mainnet` with your network of choice, constants are defined for luckycoin, regtest, mainnet, dogecoin, bellscoin, and fractal; for other networks or test networks, use the regtest feature. The `regtest` feature uses the `bcrt` bech32 prefix; for Signet use `--features testnet`, which sets the `tb` bech32 prefix and testnet base58 prefixes and, like the regtest build, activates at genesis block 0.
 
 The `alkanes.wasm` file is produced at `target/wasm32-unknown-unknown/release/alkanes.wasm`, and a WASM for every crate prefixed with `alkanes-std-` is made available to the test suite.
 
@@ -70,6 +70,8 @@ To index ALKANES on mainnet you must run matching, current versions of both comp
 
 - **alkanes-rs `v2.2.1-rc.4`** (latest), built to `alkanes.wasm` and loaded via `--indexer`. See [`v2.2.1-rc.4`](https://github.com/kungfuflex/alkanes-rs/releases/tag/v2.2.1-rc.4).
 - **metashrew `v9.0.5-rc.14`**, the [`kungfuflex/metashrew`](https://github.com/kungfuflex/metashrew/releases/tag/v9.0.5-rc.14) indexer stack (`rockshrew-mono`).
+
+> **Universe runtime pin.** The Universe image (`Dockerfile.universe`) runs `rockshrew-mono` built from the Universe metashrew mirror at `v9.0.5-rc.8` (`22824e4ce8812751bd85b4dfff0da66b4ee025df`), the same revision `Cargo.lock` pins for `metashrew-core` and `metashrew-support`. index-alkanes pins exactly this pair (`alkanes-rs` v2.2.1-rc.4 with Metashrew v9.0.5-rc.8), so a Universe host runs rc.8, not the rc.14 host named above. Moving the Universe runtime to a later metashrew is a separate reviewed change to that pin.
 
 Running mismatched versions can produce divergent state. Live mainnet system health, indexer height, sync status, and RPC availability, can be checked at **[https://mainnet.subfrost.io](https://mainnet.subfrost.io)**.
 
