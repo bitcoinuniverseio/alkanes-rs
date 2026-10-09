@@ -34,7 +34,7 @@ jobs:
     name: ${{ matrix.test-config.name }}
     steps:
       - name: Provide universe host tools
-        uses: bitcoinuniverseio/universe-ci-actions/universe-host-tools@b11554bde3a933e23a7651654a930ad21ca8b369
+        uses: bitcoinuniverseio/universe-ci-actions/universe-host-tools@ca7d5a2893fd27f41c26f6b62549ccad8b3c46cb
       - uses: actions/checkout@v4
       - name: Authenticate private Universe dependencies
         env:
