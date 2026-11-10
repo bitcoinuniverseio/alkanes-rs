@@ -1,9 +1,8 @@
 # alkanes-rs
 
-![Tests](https://img.shields.io/github/actions/workflow/status/kungfuflex/alkanes-rs/rust.yml?branch=main&label=tests&logo=github)
-![Publish](https://img.shields.io/github/actions/workflow/status/kungfuflex/alkanes-rs/publish-npm.yml?branch=main&label=publish&logo=github)
+![Tests](https://img.shields.io/github/actions/workflow/status/bitcoinuniverseio/alkanes-rs/rust.yml?branch=main&label=tests&logo=github)
 
-**The ALKANES specification is hosted at** 👉🏻👉🏼👉🏽👉🏾👉🏿 [https://github.com/kungfuflex/alkanes-rs/wiki](https://github.com/kungfuflex/alkanes-rs/wiki)
+**The ALKANES specification is hosted at** [https://github.com/kungfuflex/alkanes-rs/wiki](https://github.com/kungfuflex/alkanes-rs/wiki)
 
 This repository hosts Rust sources for the ALKANES metaprotocol. The indexer for ALKANES can be built as the top level crate in the monorepo, with builds targeting wasm32-unknown-unknown, usable within the METASHREW indexer stack.
 
@@ -281,8 +280,7 @@ The typed clients read from the same endpoints as the CLI (`https://mainnet.subf
 **Wallets, ALKANES-enabled Bitcoin, everywhere**
 
 - **Chrome extension**, [https://subfrost.io/download](https://subfrost.io/download)
-- **Android**, [Google Play](https://play.google.com/store/apps/details?id=io.subfrost.android) (iOS coming soon, so ALKANES-enabled Bitcoin works on mobile)
-- **espo** will soon release an **open-source wallet** for those running their own infrastructure.
+- **Android**, [Google Play](https://play.google.com/store/apps/details?id=io.subfrost.android)
 
 **Stay updated**
 
@@ -290,7 +288,7 @@ The typed clients read from the same endpoints as the CLI (`https://mainnet.subf
 
 ## Acknowledgements
 
-ALKANES is carried forward by a community of builders, indexers, contract authors, and researchers who believe finance can be open, permissionless, and native to Bitcoin. To everyone writing code, running infrastructure, shipping contracts, filing issues, and stress-testing the protocol in the open, thank you. This work moves because you move it, toward a vision of free finance for everyone. 🧡
+ALKANES is carried forward by a community of builders, indexers, contract authors, and researchers who believe finance can be open, permissionless, and native to Bitcoin. To everyone writing code, running infrastructure, shipping contracts, filing issues, and stress-testing the protocol in the open, thank you.
 
 ### Authors
 
