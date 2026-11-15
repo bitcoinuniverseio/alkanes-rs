@@ -211,6 +211,8 @@ jobs:
           cat "../pkg-manifests/${{ steps.version.outputs.version }}.json"
 
       - name: Upload build manifest
+        # Report-only upload: keep the job green when the shared artifact storage quota is full.
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: pkg-manifest-${{ steps.version.outputs.version }}
