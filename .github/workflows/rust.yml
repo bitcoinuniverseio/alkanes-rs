@@ -26,15 +26,18 @@ jobs:
           - name: "WASM Tests"
             command: "cargo test --target wasm32-unknown-unknown --features test-utils"
           - name: "Protorunes WASM Tests"
-            command: "cargo test -p protorune --features test-utils"
+            # --test-threads=1: protorune's tests share metashrew's global KV
+            # singleton; in parallel they race on it and the binary aborts
+            # (double free / SIGABRT). Same fix as upstream kungfuflex/alkanes-rs.
+            command: "cargo test -p protorune --features test-utils -- --test-threads=1"
           - name: "Protorune Unit Tests"
-            command: "cargo test -p protorune --target x86_64-unknown-linux-gnu"
+            command: "cargo test -p protorune --target x86_64-unknown-linux-gnu -- --test-threads=1"
       fail-fast: false # Allows all tests to run even if one fails
 
     name: ${{ matrix.test-config.name }}
     steps:
       - name: Provide universe host tools
-        uses: bitcoinuniverseio/universe-ci-actions/universe-host-tools@ca7d5a2893fd27f41c26f6b62549ccad8b3c46cb
+        uses: bitcoinuniverseio/universe-ci-actions/universe-host-tools@49c5ceb7e97bd33b567513b3135e0eb5525d89e5
       - uses: actions/checkout@v4
       - name: Authenticate private Universe dependencies
         env:
