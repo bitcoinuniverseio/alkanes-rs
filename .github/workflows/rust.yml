@@ -41,10 +41,28 @@ jobs:
           UNIVERSE_GITHUB_READ_TOKEN: ${{ secrets.UNIVERSE_GITHUB_READ_TOKEN }}
         run: |
           test -n "${UNIVERSE_GITHUB_READ_TOKEN}"
-          credentials_file="${RUNNER_TEMP}/universe-git-credentials"
+          # Job-scoped credentials. The file lives in this job's RUNNER_TEMP and
+          # git reaches it only through GIT_CONFIG_* variables that this job's
+          # later steps inherit (cargo fetches with the git CLI). ~/.gitconfig
+          # is never written, so concurrent jobs under the same runner account
+          # (including this matrix) neither see this token nor lose their own
+          # configuration. Only the file path goes to GITHUB_ENV, never the token.
+          umask 077
+          # A hard-cancelled earlier job on this runner instance skips the
+          # always() cleanup. RUNNER_TEMP belongs to this instance, which runs
+          # one job at a time, so anything left here is never a concurrent job's.
+          find "${RUNNER_TEMP}" -maxdepth 1 -type f -name 'universe-git-credentials-*' -delete
+          credentials_file="${RUNNER_TEMP}/universe-git-credentials-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${{ strategy.job-index }}"
           printf 'https://x-access-token:%s@github.com\n' "${UNIVERSE_GITHUB_READ_TOKEN}" > "${credentials_file}"
-          chmod 600 "${credentials_file}"
-          git config --global credential.helper "store --file=${credentials_file}"
+          {
+            echo "UNIVERSE_GIT_CREDENTIALS_FILE=${credentials_file}"
+            echo "GIT_CONFIG_COUNT=2"
+            # An empty helper first resets any helper inherited for github.com.
+            echo "GIT_CONFIG_KEY_0=credential.https://github.com.helper"
+            echo "GIT_CONFIG_VALUE_0="
+            echo "GIT_CONFIG_KEY_1=credential.https://github.com.helper"
+            echo "GIT_CONFIG_VALUE_1=store --file=${credentials_file}"
+          } >> "${GITHUB_ENV}"
       - name: Install protoc
         run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
       - name: Install Rust
@@ -58,5 +76,8 @@ jobs:
       - name: Remove dependency credentials
         if: always()
         run: |
-          rm -f "${RUNNER_TEMP}/universe-git-credentials"
-          git config --global --unset-all credential.helper || true
+          # Only this job's own file. Global git configuration is never read or
+          # changed here, so a concurrent job is never affected.
+          if [ -n "${UNIVERSE_GIT_CREDENTIALS_FILE:-}" ]; then
+            rm -f "${UNIVERSE_GIT_CREDENTIALS_FILE}"
+          fi
